@@ -1,0 +1,103 @@
+// TrueMile Wave 1 — Private Vehicle History Claim Verification
+// A seller proves a claim about their vehicle history without revealing the full record.
+
+// --- Public ledger state ---
+// Only commitment hashes and verification results are stored on-chain.
+
+struct ClaimRecord {
+  verified: Boolean,
+  timestamp: Nat,
+}
+
+ledger claimCommitments: Map<Bytes<32>, ClaimRecord>;
+
+// --- Local witness: the raw vehicle history stays private to the seller ---
+
+enum Severity { None, Minor, Major, Total }
+
+struct Accident {
+  severity: Severity,
+  date: Nat, // epoch days or similar compact representation
+}
+
+struct ServiceEvent {
+  dealer: Boolean,
+  date: Nat,
+}
+
+struct VehicleHistory {
+  accidents: List<Accident>,
+  mileage: Nat,
+  serviceEvents: List<ServiceEvent>,
+}
+
+witness localVehicleHistory: VehicleHistory;
+
+// --- Claim criteria ---
+
+struct ClaimCriteria {
+  maxMajorAccidents: Nat,
+  maxMileage: Nat,
+  minDealerServiceRatio: Nat, // represented as percentage, e.g. 80 for 80%
+}
+
+// --- Circuits ---
+
+// Count how many accidents meet or exceed a given severity.
+function countAccidentsBySeverity(accidents: List<Accident>, minSeverity: Severity): Nat {
+  return fold(
+    accidents,
+    0,
+    (acc: Nat, a: Accident) => acc + (if a.severity >= minSeverity then 1 else 0)
+  );
+}
+
+function countDealerServices(services: List<ServiceEvent>): Nat {
+  return fold(
+    services,
+    0,
+    (acc: Nat, s: ServiceEvent) => acc + (if s.dealer then 1 else 0)
+  );
+}
+
+// The core verification circuit. It reads private witness data, evaluates the claim,
+// and discloses only the commitment and the boolean result.
+circuit submitClaim(claimCriteria: ClaimCriteria): [Bytes<32>] {
+  let history = localVehicleHistory;
+
+  let majorAccidents = countAccidentsBySeverity(history.accidents, Severity.Major);
+  let dealerServices = countDealerServices(history.serviceEvents);
+  let totalServices = length(history.serviceEvents);
+
+  let mileageOk = history.mileage <= claimCriteria.maxMileage;
+  let accidentOk = majorAccidents <= claimCriteria.maxMajorAccidents;
+  let serviceRatioOk = if totalServices == 0
+    then false
+    else (dealerServices * 100) / totalServices >= claimCriteria.minDealerServiceRatio;
+
+  let verified = mileageOk && accidentOk && serviceRatioOk;
+
+  // Build a deterministic commitment from the private history and the criteria.
+  // The hash input is structured so the same history + criteria always yield the same commitment.
+  let commitmentInput = pad(history.mileage) ++ pad(majorAccidents) ++ pad(dealerServices)
+    ++ pad(claimCriteria.maxMileage) ++ pad(claimCriteria.maxMajorAccidents)
+    ++ pad(claimCriteria.minDealerServiceRatio);
+  let commitment = hash(commitmentInput);
+
+  // Disclose only what is allowed to become public.
+  let disclosedCommitment = disclose(commitment);
+  let disclosedVerified = disclose(verified);
+
+  claimCommitments[disclosedCommitment] = ClaimRecord {
+    verified = disclosedVerified,
+    timestamp = 0 // placeholder: real timestamp should come from ledger context if available
+  };
+
+  return [disclosedCommitment];
+}
+
+// Public lookup: anyone can verify that a given commitment was recorded as passing.
+circuit verifyClaim(commitment: Bytes<32>): [Boolean] {
+  let record = claimCommitments[commitment];
+  return [record.verified];
+}

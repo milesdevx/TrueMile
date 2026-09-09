@@ -1,0 +1,22 @@
+{
+  "name": "truemile",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "workspaces": [
+    "frontend"
+  ],
+  "overrides": {
+    "postcss": "^8.4.49"
+  },
+  "scripts": {
+    "compile": "cd contracts && compact compile truemile.compact ../managed/truemile",
+    "test": "vitest run",
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}
