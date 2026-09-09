@@ -177,14 +177,14 @@ This is complete, standalone value on its own — a buyer can already trust a se
 
 ### ✅ Wave 1 Deliverables
 - [ ] `truemile.compact` compiles with zero errors
-- [ ] Vehicle history modeled as `witness`; ledger holds only commitment + boolean + timestamp
+- [x] Vehicle history modeled as `witness`; ledger holds only commitment + boolean + timestamp
 - [ ] `submitClaim` and `verifyClaim` implemented and tested against real compiled circuits
-- [ ] Seller view + Buyer view live, connected via SDK
-- [ ] UI follows [§2.1](#-21-high-end-modern-web-uiux) (role-based, clear states, accessible, responsive)
+- [x] Seller view + Buyer view live, connected via SDK
+- [x] UI follows [§2.1](#-21-high-end-modern-web-uiux) (role-based, clear states, accessible, responsive)
 - [ ] Public GitHub repo, Apache 2.0, tagged `midnightntwrk`
-- [ ] README covering architecture, setup, how to test
+- [x] README covering architecture, setup, how to test
 - [ ] Slide deck link, demo video link
-- [ ] Live Vercel deployment, tested from a device other than the dev machine
+- [x] Live Vercel deployment, tested from a device other than the dev machine
 
 ---
 
