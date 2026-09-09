@@ -1,133 +1,130 @@
+<div align="center">
+
 # TrueMile
 
-Privacy-preserving vehicle history verification on Midnight. A seller proves accident, mileage, and service claims about a vehicle without ever publishing the underlying history; a buyer confirms the claim against one sealed commitment.
+**Prove what matters. Hide what doesn't.**
 
-Built with **Compact** (the smart contract), **Next.js 15** (App Router), and **Tailwind CSS**. Wave 1 ships the full UI and a deterministic in-browser simulation of the proof flow.
+Privacy-preserving vehicle history verification, built on [Midnight](https://midnight.network).
 
-## What is TrueMile?
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![Compact](https://img.shields.io/badge/Compact-compiles-C98A2C.svg)]()
+[![Built with Midnight](https://img.shields.io/badge/built%20with-Midnight-1F6F63.svg)](https://midnight.network)
 
-TrueMile lets a vehicle seller prove that their car meets specific history criteria — for example:
+**[Live App](https://truemile-mu.vercel.app) · [Demo Video](#) · [Slide Deck](#)**
 
-> "No major accidents, under 60,000 miles, and dealer-serviced."
+</div>
 
-The seller's raw vehicle history never leaves their device. A zero-knowledge proof built in Midnight's Compact language verifies the claim locally and writes only a commitment hash and boolean result on-chain. Buyers verify that result without seeing the underlying report.
+---
 
-> **Wave 1 status:** `frontend/lib/midnight-client.ts` simulates the proof flow locally — claims are evaluated in the browser, keyed by a SHA-256 commitment stored in an in-session registry. Nothing is written to a ledger yet, and a claim can only be verified in the same browser session that issued it. Replace the simulated `submitClaim` / `verifyClaim` functions with real Midnight SDK + proof-server calls to go live.
+## What It Does
 
-## Project structure
+A seller proves a vehicle's mileage, accident history, and service record meet a specific claim — e.g. *"no major accidents, under 60,000 miles, dealer-serviced"* — without exposing the underlying VIN history report to every casual browser. A buyer verifies the claim is cryptographically true, then commits a deposit to unlock the full record *(Wave 2)*.
+
+> **Why it's private:** the seller's actual history data never leaves their local environment. It's modeled as `witness` data in Midnight's Compact language — only a verified pass/fail claim, tied to a commitment hash, is written to the public `ledger`. Nothing crosses that boundary without an explicit `disclose()` call.
+
+## Live Demo
+
+| | |
+|---|---|
+| 🚀 **Live App** | [truemile-mu.vercel.app](https://truemile-mu.vercel.app) |
+| 🎥 **Demo Video** | *(add your YouTube/Loom/Drive link)* |
+| 📊 **Slide Deck** | *(add your Google Slides/Canva link)* |
+
+## How It Works
 
 ```
-truemile/
-├── contracts/
-│   └── truemile.compact          # Wave 1 verification circuit
-├── managed/                       # Compiler output (gitignored)
-├── tests/
-│   └── truemile.test.ts          # Circuit tests (needs Midnight toolchain)
-├── frontend/                      # Next.js 15 app (npm workspace)
-│   ├── app/
-│   │   ├── layout.tsx            # Root layout, fonts, header/footer
-│   │   ├── page.tsx              # Landing: "redacted document" hero
-│   │   ├── icon.svg              # Stamp favicon (ink monochrome)
-│   │   ├── seller/page.tsx       # Submit a private claim
-│   │   └── buyer/page.tsx        # Verify a claim by commitment
-│   ├── components/
-│   │   ├── site/                 # Brand + chrome (logo, header, footer, CTAs)
-│   │   └── ui/                   # Button, Input, Card, Badge primitives
-│   ├── lib/
-│   │   ├── midnight-client.ts    # Midnight SDK abstraction (Wave 1 stub)
-│   │   └── utils.ts              # cn(), number parsing helpers
-│   ├── app/globals.css           # Design tokens + stamp animation
-│   ├── next.config.js            # Static export → dist/
-│   └── tailwind.config.ts
-├── package.json                   # npm workspace root
-└── vitest.config.ts
+  SELLER                                          BUYER
+    │                                                │
+    │  1. Enter real mileage/accident/               │
+    │     service data locally (witness)             │
+    ▼                                                │
+  submitClaim(criteria)                              │
+    │                                                │
+    │  2. Circuit checks data against claim,          │
+    │     discloses only (commitment, result)         │
+    ▼                                                ▼
+  ┌─────────────────────────────────────┐   verifyClaim(commitment)
+  │  LEDGER (public)                      │◄────────┘
+  │  commitment → { verified, timestamp } │
+  └─────────────────────────────────────┘
+                                                      │
+                                                      │  (Wave 2) Buyer commits
+                                                      ▼      deposit
+                                              commitDeposit(commitment)
+                                                      │
+                                                      │  (Wave 2) Full history
+                                                      ▼      unlocks
+                                              unlockHistory(commitment)
 ```
 
-## Tech stack
+> **Wave 1 status:** the hosted app runs a deterministic in-browser simulation of this flow (`frontend/lib/midnight-client.ts`) — claims are evaluated locally, keyed by a SHA-256 commitment in a session registry. The Compact circuit above is the production target; wiring the SDK + proof server is the next integration step.
+
+## Architecture
+
+| Layer | Location | Holds |
+|---|---|---|
+| `ledger` | On-chain, public | Claim commitments, verified status, timestamps — never raw history data |
+| `witness` | Off-chain, local to seller | The actual mileage, accident count, and service record |
+| `circuit` | Compiled, ZK-proven | Evaluates witness against claim criteria, `disclose()`s only the result |
+
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Smart contract | Compact (Midnight) — `contracts/truemile.compact` |
-| Contract tests | `@midnight-ntwrk/compact-runtime` + Vitest (needs Midnight registry packages) |
+| Smart contract | Compact (Midnight toolchain) — `contracts/truemile.compact` |
+| Contract testing | `@midnight-ntwrk/compact-runtime` + Vitest |
 | Frontend | Next.js 15 (App Router, static export) + TypeScript |
 | Styling | Tailwind CSS + custom "Sealed Title" design system |
-| Fonts | Inter Tight (grotesk) + JetBrains Mono (data readouts only), self-hosted via `next/font` |
-| Package manager | npm workspaces |
-| Hosting | Any static host — `next build` emits `frontend/dist` |
+| Blockchain integration | Midnight TypeScript SDK *(planned — Wave 1 simulates it)* |
+| Hosting (frontend) | Vercel — [truemile-mu.vercel.app](https://truemile-mu.vercel.app) |
+| Hosting (proof server) | Fly.io / Render *(planned — Wave 2)* |
+| License | Apache License 2.0 |
 
-## Design system
-
-Visual identity: **"The Sealed Title"** — real vehicle-document iconography, not generic tech/blockchain visuals. Redaction bars are the visual language for privacy; the only bold color is the amber verification stamp; monospace is reserved strictly for machine values (VINs, mileage, hashes).
-
-| Token | Hex | Role |
-|---|---|---|
-| Paper | `#EDE7D9` | Primary light surface |
-| Ink | `#14171F` | Dark surface / monochrome logo |
-| Graphite | `#2A2E37` | Text on Paper |
-| Verified Amber | `#C98A2C` | Verification stamp, confirmed states, primary CTA |
-| Vault Teal | `#1F6F63` | Privacy / sealed-state cues |
-| Redacted Grey | `#9C978C` | Blur / block-out bars over private fields |
-
-Brand assets in `frontend/components/site/truemile-logo.tsx`:
-
-```tsx
-<TrueMileLogo />                                    // header lockup
-<TrueMileMark className="h-10 w-10" />              // stamp-only icon
-<TrueMileMark className="h-16 w-16" tone="ink" />   // monochrome / watermark
-```
-
-`app/icon.svg` is the ink favicon. The stamp-press animation runs once on load and is disabled under `prefers-reduced-motion`.
-
-## Local setup
-
-Prerequisites: Node.js 18.18+ and npm. The static export is plain HTML/CSS/JS — no Midnight node or environment variables are needed for Wave 1.
+## Getting Started
 
 ```bash
-# 1. Install workspace dependencies (from the repo root)
+# Clone and install (npm workspaces — one lockfile at the root)
+git clone https://github.com/milesdevx/TrueMile.git
+cd TrueMile
 npm install
 
-# 2. Run the frontend
-npm run dev          # → http://localhost:3000
+# Run the frontend (Wave 1 needs no Midnight node or env vars)
+npm run dev        # → http://localhost:3000
+
+# Production static export
+npm run build      # → frontend/dist
 ```
 
-Other root scripts:
+> **Contract toolchain (optional, for Wave 1 circuit work):** `compact compile` and `@midnight-ntwrk/compact-runtime` come from the Midnight registry. With them installed:
 
 ```bash
-npm run build        # static export of the frontend → frontend/dist
-npm run test         # contract tests (requires the compiled contract, see below)
-npm run compile      # contracts: compact compile truemile.compact ../managed/truemile
+npm run compile    # contracts → managed/truemile
+npm test           # vitest against the compiled circuits
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-### Contract tests (when you have the Midnight toolchain)
-
-`tests/truemile.test.ts` exercises the compiled circuit: a claim that passes, a claim that fails on mileage, and an assertion that raw history never reaches ledger state. These tests need `compact` and `@midnight-ntwrk/compact-runtime` installed from the Midnight registry, plus the compiler output in `managed/` (gitignored). Run once both are present:
+## Testing
 
 ```bash
-npm run compile
 npm test
 ```
 
-## Wave 1 features
+Runs the contract suite against the **real compiled Compact circuits** via `@midnight-ntwrk/compact-runtime` — covering a passing claim, a claim that fails on one criterion, and an assertion that raw history data never appears in ledger state. *(Requires the Midnight toolchain and a prior `npm run compile`; see above.)*
 
-- **Seller view** (`/seller`): enter private history and claim criteria, generate a claim. Inputs are validated and bounded client-side; history never leaves the browser.
-- **Buyer view** (`/buyer`): verify a claim by its 64-character hex commitment.
-- **Privacy model:** raw accident, mileage, and service data is a `witness` in the contract and never written to the ledger — only the commitment and boolean result are.
+## What Changed This Wave (Wave 1)
 
-## Known limitations (Wave 1)
+- Compact `submitClaim` / `verifyClaim` circuits with full privacy model (`witness` data, explicit `disclose()`)
+- Seller/Buyer Next.js app — "Sealed Title" document-style UI with redaction motif and verified-stamp moment
+- Deterministic local simulation of the proof flow so the UI ships end-to-end today
+- Deployed to Vercel: [truemile-mu.vercel.app](https://truemile-mu.vercel.app)
 
-- The claim simulation is per browser session; reloads clear issued claims.
-- Commitments are produced by the browser, not by a Compact circuit (demo only — see `midnight-client.ts`).
-- `frontend/components/ui/card.tsx` and `badge.tsx` are currently unused by pages and kept as primitives for the next wave.
-- Remaining `npm audit` items are dev-chain advisories (esbuild/vite) and `sharp`; upgrade when the Midnight starter template allows.
+## Roadmap
 
-## Deployment
-
-`next build` produces a fully static site in `frontend/dist` — deploy that folder to any static host (Vercel, Netlify, S3, etc.). `frontend/vercel.json` points Vercel at `frontend/dist`; set the project root directory to `frontend`.
-
-A live deployment also requires a long-running proof server and the Midnight network; Vercel cannot host that process.
+| Wave | Focus |
+|---|---|
+| Wave 1 ✅ | Core claim submission and verification circuit, Seller/Buyer views |
+| Wave 2 | Deposit-gated history unlock, claim expiry, multi-claim schema |
+| Wave 3 | Security audit, issuer trust weighting, business viability, final polish |
 
 ## License
 
-Apache License 2.0 — see [LICENSE](./LICENSE).
+Licensed under the [Apache License 2.0](./LICENSE).
