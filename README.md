@@ -5,7 +5,6 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 [![Built with Midnight](https://img.shields.io/badge/built%20with-Midnight-1F6F63.svg)](https://midnight.network)
-[![Grant Pool](https://img.shields.io/badge/Grant%20Pool-%2412%2C500-C98A2C.svg)]()
 [![Status](https://img.shields.io/badge/Wave%201-in%20progress-9C978C.svg)]()
 
 **[Live App](https://truemile-mu.vercel.app) · [Repo](https://github.com/milesdevx/TrueMile)**
@@ -26,13 +25,11 @@
   ●━━━━━━━━━━━━━━━━━━━━━●━ ─ ─ ─ ─ ─ ─ ●─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─○
   WAVE 1                 WAVE 2                          WAVE 3
   Foundation              Expansion                        Maturity
-  $3,500                  $4,000                           $5,000
   🔎 Verify a claim       🔐 Deposit-gated unlock          🛡️ Audit + adoption
 ```
 
 | | Wave 1 — Foundation | Wave 2 — Expansion | Wave 3 — Maturity |
 |---|---|---|---|
-| **Grant Pool** | $3,500 | $4,000 | $5,000 |
 | **Core Deliverable** | Claim verification circuit | Deposit-gated unlock | Security audit + business case |
 | **Status** | 🟢 In progress | ⚪ Planned | ⚪ Planned |
 
@@ -162,7 +159,7 @@ The project deploys as a **static export** (`npm run build` → `frontend/dist`)
 ---
 
 ## 4. 🌊 Wave 1 — Foundation
-**Grant pool: $3,500** · **Objective:** ship one genuinely useful, fully functional feature — the private verification circuit itself — end-to-end, on a real UI, with real tests.
+**Objective:** ship one genuinely useful, fully functional feature — the private verification circuit itself — end-to-end, on a real UI, with real tests.
 
 ### ✨ Core Feature (delivers immediate value)
 **Private History Claim Verification.** A seller enters their vehicle's actual accident count, mileage, and service records locally. The system proves — via a real Compact circuit — whether that data satisfies a claim the seller specifies, and publishes only the pass/fail result on-chain, tied to a commitment hash. A buyer can independently verify this claim without ever seeing the underlying data.
@@ -192,7 +189,7 @@ This is complete, standalone value on its own — a buyer can already trust a se
 ---
 
 ## 5. 🌊 Wave 2 — Expansion
-**Grant pool: $4,000** · **Objective:** add the deposit-gated disclosure mechanism and harden verification — the feature behind the product's actual business model.
+**Objective:** add the deposit-gated disclosure mechanism and harden verification — the feature behind the product's actual business model.
 
 ### 🔧 Build Prompt
 > Extend `truemile.compact` without disturbing the Wave 1 verification guarantee.
@@ -215,7 +212,7 @@ This is complete, standalone value on its own — a buyer can already trust a se
 ---
 
 ## 6. 🌊 Wave 3 — Maturity
-**Grant pool: $5,000** · **Objective:** harden for production readiness and build the business case for real-world adoption.
+**Objective:** harden for production readiness and build the business case for real-world adoption.
 
 ### 🔧 Build Prompt
 > Conduct a full security and UX audit rather than adding speculative new features.
