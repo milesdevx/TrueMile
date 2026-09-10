@@ -7,7 +7,7 @@
 [![Built with Midnight](https://img.shields.io/badge/built%20with-Midnight-1F6F63.svg)](https://midnight.network)
 [![Status](https://img.shields.io/badge/Wave%201-in%20progress-9C978C.svg)]()
 
-**[Live App](https://truemile-mu.vercel.app) · [Repo](https://github.com/milesdevx/TrueMile)**
+**[Live App](https://truemile-mu.vercel.app) · [Demo Video](https://youtu.be/3UtOo4ppqYg?si=PbzPMR8OD33oA6_e) · [Slide Deck](https://docs.google.com/presentation/d/1UtGHGqnfH4wzkO1UkTrFIxAUUsS0VswF3KpOJUhMd7Y/edit?usp=sharing) · [Repo](https://github.com/milesdevx/TrueMile)**
 
 </div>
 
@@ -18,6 +18,14 @@
 > TrueMile lets a seller prove a vehicle's mileage, accident, and service history meets a specific claim — e.g. **"no major accidents, under 60,000 miles, dealer-serviced"** — without exposing the underlying VIN report to every casual browser. A buyer verifies the claim is cryptographically true, then commits a deposit to unlock the full record.
 >
 > The privacy guarantee is enforced by cryptography, not platform policy: the seller's raw history data never leaves their local environment. Only a verified pass/fail claim, tied to a commitment hash, ever touches the public ledger.
+
+## 🎬 Demo & Pitch
+
+| | |
+|---|---|
+| 🚀 **Live App** | [truemile-mu.vercel.app](https://truemile-mu.vercel.app) |
+| 🎥 **Demo Video** | [Watch the walkthrough](https://youtu.be/3UtOo4ppqYg?si=PbzPMR8OD33oA6_e) |
+| 📊 **Slide Deck** | [View the pitch deck](https://docs.google.com/presentation/d/1UtGHGqnfH4wzkO1UkTrFIxAUUsS0VswF3KpOJUhMd7Y/edit?usp=sharing) |
 
 ## 🗺️ Roadmap at a Glance
 
@@ -176,14 +184,14 @@ This is complete, standalone value on its own — a buyer can already trust a se
 > Build the Seller and Buyer views per [§2.3](#-23-optimized-technology-stack) and [§2.1](#-21-high-end-modern-web-uiux), and write tests covering: a passing claim, a claim failing one criterion, and an assertion that raw history data never appears in ledger state.
 
 ### ✅ Wave 1 Deliverables
-- [ ] `truemile.compact` compiles with zero errors
+- [x] `truemile.compact` compiles with zero errors
 - [x] Vehicle history modeled as `witness`; ledger holds only commitment + boolean + timestamp
-- [ ] `submitClaim` and `verifyClaim` implemented and tested against real compiled circuits
+- [x] `submitClaim` and `verifyClaim` implemented and tested against real compiled circuits
 - [x] Seller view + Buyer view live, connected via SDK
 - [x] UI follows [§2.1](#-21-high-end-modern-web-uiux) (role-based, clear states, accessible, responsive)
-- [ ] Public GitHub repo, Apache 2.0, tagged `midnightntwrk`
+- [x] Public GitHub repo, Apache 2.0, tagged `midnightntwrk`
 - [x] README covering architecture, setup, how to test
-- [ ] Slide deck link, demo video link
+- [x] Slide deck link, demo video link
 - [x] Live Vercel deployment, tested from a device other than the dev machine
 
 ---
