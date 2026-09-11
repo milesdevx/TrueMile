@@ -16,7 +16,7 @@ import {
   type SubmitStage,
 } from '@/lib/midnight-client';
 import { cn, formatCommitment, parseBoundedInt } from '@/lib/utils';
-import { buildVerificationBadgeSvg, downloadVerificationBadge } from '@/lib/badge';
+import { buildVerificationBadgeSvg, downloadVerificationBadgeJpg } from '@/lib/badge';
 import { useWallet } from '@/lib/useWallet';
 
 const numberInputCls =
@@ -178,14 +178,21 @@ export default function SellerPage() {
 
   const mileagePreview = parseBoundedInt(mileage, { min: 0 });
 
-  function handleDownloadBadge() {
+  async function handleDownloadBadge() {
     if (!result?.verified) return;
     const svg = buildVerificationBadgeSvg({
       commitment: result.commitment,
       vehicleId: result.vehicleId,
       verified: result.verified,
     });
-    downloadVerificationBadge(`truemile-badge-${result.commitment.slice(0, 8)}.svg`, svg);
+    try {
+      await downloadVerificationBadgeJpg(
+        `truemile-badge-${result.commitment.slice(0, 8)}.jpg`,
+        svg
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not generate the badge image.');
+    }
   }
 
   const sealState: ProofSealState = loading
@@ -391,7 +398,7 @@ export default function SellerPage() {
                 </p>
                 <div className="mt-4">
                   <Button type="button" variant="outline" size="sm" onClick={handleDownloadBadge}>
-                    Download embeddable badge
+                    Download embeddable badge (JPG)
                   </Button>
                 </div>
               </div>
