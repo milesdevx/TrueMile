@@ -8,6 +8,7 @@ import { ProofSeal, type ProofSealState } from '@/components/site/proof-seal';
 import { StatusChip } from '@/components/site/status-chip';
 import { verifyClaim, isValidCommitment, getExampleCommitment, type VerifyStage } from '@/lib/midnight-client';
 import { cn } from '@/lib/utils';
+import { useWallet } from '@/lib/useWallet';
 
 const VERIFY_STAGE_LABEL: Record<VerifyStage, string> = {
   reading: 'Reading the commitment…',
@@ -33,6 +34,7 @@ function LockIcon() {
 }
 
 export default function BuyerPage() {
+  const { isConnected, openConnect, recordActivity } = useWallet();
   const [commitment, setCommitment] = useState('');
   const [result, setResult] = useState<{ commitment: string; verified: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -40,6 +42,12 @@ export default function BuyerPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function runVerify(value: string) {
+    // Gate at the point of action — browsing and the registry stay wallet-free.
+    if (!isConnected) {
+      openConnect();
+      return;
+    }
+
     setError(null);
     setResult(null);
     setStage('reading');
@@ -54,6 +62,9 @@ export default function BuyerPage() {
     try {
       const claimResult = await verifyClaim(normalized, { onStage: setStage });
       setResult(claimResult);
+      if (claimResult.verified) {
+        recordActivity('claim_verified', normalized);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to verify claim');
     } finally {
@@ -148,6 +159,13 @@ export default function BuyerPage() {
         <Button type="submit" size="lg" className="mt-5 w-full" disabled={loading}>
           {loading ? 'Verifying…' : 'Verify commitment'}
         </Button>
+
+        {!isConnected && (
+          <p className="mt-3 text-xs leading-relaxed text-faint">
+            A wallet is required to run a verification. The registry below stays
+            readable without one.
+          </p>
+        )}
 
         {error && (
           <p

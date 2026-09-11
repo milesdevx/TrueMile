@@ -3,20 +3,22 @@
 @tailwind utilities;
 
 :root {
-  /* Certificate palette — channel values so alpha modifiers work. */
-  --ground: 21 23 28; /* garage-floor charcoal, not pure black */
-  --panel: 27 30 38; /* card surface */
-  --panel2: 34 38 47; /* raised / sealed chip surface */
-  --line: 49 54 63; /* borders, dividers, perforated edge */
-  --bone: 236 232 223; /* primary text — aged title paper */
-  --dim: 144 150 163; /* secondary text */
-  --faint: 92 98 112; /* field labels, timestamps */
+  /* Certificate palette — channel values so alpha modifiers work.
+     Contrast is deliberately softened from pure black/white to avoid eye
+     strain while staying readable; it is not clinical high-contrast. */
+  --ground: 32 36 45; /* garage-floor charcoal, not pure black */
+  --panel: 39 44 54; /* card surface */
+  --panel2: 48 54 65; /* raised / sealed chip surface */
+  --line: 65 72 85; /* borders, dividers, perforated edge */
+  --bone: 216 212 203; /* primary text — aged title paper */
+  --dim: 162 168 180; /* secondary text */
+  --faint: 139 147 161; /* field labels, timestamps */
 
   --seal: 201 162 74; /* verified / public result */
   --sealed: 95 184 176; /* private, sealed data */
   --signal: 224 138 60; /* action / CTA */
   --danger: 211 101 79; /* risk / failed claim */
-  --onaccent: 21 23 28; /* text on a signal/seal/danger fill */
+  --onaccent: 32 36 45; /* text on a signal/seal/danger fill */
 
   /* Motion: ease-out to appear, ease-in to dismiss. Never bounce/spring. */
   --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
@@ -28,22 +30,23 @@
 
 /*
  * Light mode is its own intentional look — "clean title paper", not the dark
- * palette inverted. Accent colors are darkened for contrast on light ground.
+ * palette inverted. Warm off-white rather than clinical #ffffff, with softened
+ * text contrast for long reading.
  */
 [data-theme='light'] {
-  --ground: 246 244 238;
-  --panel: 255 255 255;
-  --panel2: 236 232 221;
-  --line: 216 211 198;
-  --bone: 28 30 36;
-  --dim: 90 95 107;
-  --faint: 138 143 155;
+  --ground: 240 237 230;
+  --panel: 250 249 246;
+  --panel2: 231 228 219;
+  --line: 211 206 194;
+  --bone: 47 50 58;
+  --dim: 91 96 106;
+  --faint: 111 116 128;
 
   --seal: 166 127 46;
   --sealed: 47 143 134;
   --signal: 199 111 34;
   --danger: 184 70 47;
-  --onaccent: 250 248 243;
+  --onaccent: 250 249 246;
 
   color-scheme: light;
 }

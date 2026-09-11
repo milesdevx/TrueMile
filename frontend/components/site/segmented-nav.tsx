@@ -48,7 +48,7 @@ export function SegmentedNav({ items, className }: SegmentedNavProps) {
             href={item.href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'relative z-10 w-20 rounded-full px-3 py-1.5 text-center text-sm font-medium transition-colors sm:w-24',
+              'relative z-10 w-16 rounded-full px-2 py-1.5 text-center text-xs font-medium transition-colors sm:w-24 sm:px-3 sm:text-sm',
               active ? 'text-bone' : 'text-dim hover:text-bone'
             )}
           >

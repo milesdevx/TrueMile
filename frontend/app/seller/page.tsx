@@ -17,6 +17,7 @@ import {
 } from '@/lib/midnight-client';
 import { cn, formatCommitment, parseBoundedInt } from '@/lib/utils';
 import { buildVerificationBadgeSvg, downloadVerificationBadge } from '@/lib/badge';
+import { useWallet } from '@/lib/useWallet';
 
 const numberInputCls =
   'font-mono text-[15px] tracking-[-0.01em] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
@@ -104,6 +105,7 @@ function NumberField({
 }
 
 export default function SellerPage() {
+  const { isConnected, openConnect, recordActivity } = useWallet();
   const [mileage, setMileage] = useState('54000');
   const [majorAccidents, setMajorAccidents] = useState('0');
   const [dealerServices, setDealerServices] = useState('3');
@@ -123,6 +125,13 @@ export default function SellerPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // Gate at the point of action — browsing stays wallet-free.
+    if (!isConnected) {
+      openConnect();
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
@@ -159,6 +168,7 @@ export default function SellerPage() {
 
       const claimResult = await submitClaim(history, criteria, { vin, onStage: setStage });
       setResult(claimResult);
+      recordActivity('claim_submitted', claimResult.commitment);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit claim');
     } finally {
@@ -329,6 +339,13 @@ export default function SellerPage() {
         <Button type="submit" size="lg" className="w-full" disabled={loading}>
           {loading ? 'Generating proof…' : 'Generate verified claim'}
         </Button>
+
+        {!isConnected && (
+          <p className="text-xs leading-relaxed text-faint">
+            A wallet is required to submit a claim&apos;s proof. Your vehicle data never
+            leaves this device.
+          </p>
+        )}
 
         {error && (
           <p

@@ -7,6 +7,7 @@ import { SegmentedNav, type SegmentedNavItem } from '@/components/site/segmented
 import { NavVerify } from '@/components/site/nav-verify';
 import { StatusChip } from '@/components/site/status-chip';
 import { ThemeToggle } from '@/components/site/theme-toggle';
+import { WalletButton } from '@/components/site/wallet-connect';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS: SegmentedNavItem[] = [
@@ -56,6 +57,7 @@ export function SiteHeader() {
             className="hidden rounded-[4px] border-dashed px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] md:inline-flex"
             title="Local demo — Wave 1 evaluates claims in this browser. No live proof server, network, or wallet is connected yet."
           />
+          <WalletButton />
         </div>
       </div>
     </header>

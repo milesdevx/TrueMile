@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import { Barlow_Condensed, Inter_Tight, JetBrains_Mono } from 'next/font/google';
 import { SiteHeader } from '@/components/site/site-header';
 import { SiteFooter } from '@/components/site/site-footer';
+import { WalletModal } from '@/components/site/wallet-modal';
+import { WalletProvider } from '@/lib/useWallet';
 import './globals.css';
 
 const interTight = Inter_Tight({
@@ -30,29 +31,36 @@ export const metadata: Metadata = {
     'Prove a vehicle history claim without exposing the full report. Built on Midnight.',
 };
 
+const THEME_INIT = `(function(){try{var d=document.documentElement;var s=localStorage.getItem('truemile-theme');if(s!=='light'&&s!=='dark'){s=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}d.setAttribute('data-theme',s);d.style.colorScheme=s;}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
-      data-theme="dark"
       suppressHydrationWarning
       className={`${interTight.variable} ${jetbrainsMono.variable} ${barlowCondensed.variable}`}
     >
       <body className="flex min-h-dvh flex-col bg-ground text-bone" suppressHydrationWarning>
-        <Script id="theme-init" strategy="beforeInteractive">
-          {`(function(){try{var d=document.documentElement;var s=localStorage.getItem('truemile-theme');if(s!=='light'&&s!=='dark'){s=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}d.setAttribute('data-theme',s);}catch(e){}})();`}
-        </Script>
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-signal focus:px-4 focus:py-2 focus:text-sm focus:text-onaccent focus:ring-2 focus:ring-seal"
-        >
-          Skip to content
-        </a>
-        <SiteHeader />
-        <main id="main" className="grow">
-          {children}
-        </main>
-        <SiteFooter />
+        {/*
+          Runs before the rest of the body paints. The theme attribute is owned
+          by this script and the toggle — never rendered by React — so hydration
+          can't reconcile it back to a default and clobber a stored choice.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        <WalletProvider>
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-signal focus:px-4 focus:py-2 focus:text-sm focus:text-onaccent focus:ring-2 focus:ring-seal"
+          >
+            Skip to content
+          </a>
+          <SiteHeader />
+          <main id="main" className="grow">
+            {children}
+          </main>
+          <SiteFooter />
+          <WalletModal />
+        </WalletProvider>
       </body>
     </html>
   );

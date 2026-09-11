@@ -3,7 +3,28 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-type Theme = 'dark' | 'light';
+type Theme = 'light' | 'dark';
+
+const STORAGE_KEY = 'truemile-theme';
+
+function applyTheme(next: Theme) {
+  const root = document.documentElement;
+  root.setAttribute('data-theme', next);
+  root.style.colorScheme = next;
+}
+
+function systemTheme(): Theme {
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function storedTheme(): Theme | null {
+  try {
+    const value = localStorage.getItem(STORAGE_KEY);
+    return value === 'light' || value === 'dark' ? value : null;
+  } catch {
+    return null;
+  }
+}
 
 function SunIcon() {
   return (
@@ -40,28 +61,44 @@ function MoonIcon() {
 }
 
 /**
- * Theme toggle in the nav's right slot. Defaults to system preference (set by
- * the beforeInteractive script in the root layout) and remembers an explicit
- * choice. Rendered only after mount so server and client markup agree.
+ * Light/dark toggle in the nav's right slot.
+ *
+ * Resolution order: an explicit saved choice wins; otherwise the system
+ * preference via `prefers-color-scheme`. The matching system preference is
+ * followed live until the user makes an explicit choice, at which point that
+ * choice is persisted to localStorage and survives reloads. The pre-paint
+ * script in the root layout applies the same logic before first paint.
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const [theme, setTheme] = useState<Theme>('dark');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const current = document.documentElement.getAttribute('data-theme');
-    setTheme(current === 'light' ? 'light' : 'dark');
+    const initial = storedTheme() ?? systemTheme();
+    setTheme(initial);
+    applyTheme(initial);
     setMounted(true);
+
+    const query = window.matchMedia('(prefers-color-scheme: light)');
+    const onChange = () => {
+      // An explicit choice (persisted) always wins over the system.
+      if (storedTheme()) return;
+      const next = systemTheme();
+      setTheme(next);
+      applyTheme(next);
+    };
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
   }, []);
 
   function toggle() {
     const next: Theme = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    document.documentElement.setAttribute('data-theme', next);
+    applyTheme(next);
     try {
-      localStorage.setItem('truemile-theme', next);
+      localStorage.setItem(STORAGE_KEY, next);
     } catch {
-      // Private mode / storage disabled — the choice just won't persist.
+      // Storage disabled — the choice applies for this session only.
     }
   }
 
@@ -73,6 +110,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={toggle}
       aria-label={label}
       title={label}
+      aria-pressed={mounted ? theme === 'light' : undefined}
       className={cn(
         'inline-flex h-8 w-8 items-center justify-center rounded-full border border-line text-dim transition-colors hover:border-dim hover:text-bone focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-ground',
         className
