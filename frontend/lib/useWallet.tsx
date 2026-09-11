@@ -21,11 +21,16 @@ export const MIDNIGHT_NETWORK_ID =
 const LAST_WALLET_KEY = 'truemile_last_wallet';
 const ACTIVITY_KEY_PREFIX = 'truemile_activity_';
 
+/** How long to wait for a wallet extension to inject before giving up. */
+const WALLET_WAIT_MS = 2500;
+/** Shorter grace when the user explicitly clicks Connect (modal still opens after). */
+const DISCOVERY_WAIT_MS = 400;
+const WALLET_POLL_MS = 100;
+
 /**
  * Personal, per-wallet activity. Kept client-side and keyed by the connected
  * address — deliberately never read from chain state, since a public
  * "who verified what" record would leak the linkage TrueMile prevents.
- * The type union is already open-ended so Waves 2/3 add rows without a rebuild.
  */
 export type WalletActivityType =
   | 'claim_submitted'
@@ -79,6 +84,8 @@ const INITIAL_STATE: WalletState = {
 
 const WalletContext = createContext<WalletContextValue | null>(null);
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /** Non-alarming, non-leaking copy — never surface a raw thrown error. */
 function friendlyError(err: unknown): string {
   const message = err instanceof Error ? err.message : '';
@@ -129,7 +136,41 @@ function discoverWallets(): InitialAPI[] {
 
 function findWallet(rdns: string): InitialAPI | undefined {
   const wallets = walletEntries();
-  return wallets.find((wallet) => wallet.rdns === rdns) ?? (wallets.length === 1 ? wallets[0] : undefined);
+  return (
+    wallets.find((wallet) => wallet.rdns === rdns) ??
+    (wallets.length === 1 ? wallets[0] : undefined)
+  );
+}
+
+/**
+ * Wait for a specific wallet to be injected. Extensions (and the DApp
+ * connector) can attach `window.midnight` after first paint, so reconnect must
+ * not treat "not there yet" as "gone" — that was clearing the stored choice and
+ * forcing a reconnect prompt on reload.
+ */
+async function waitForWallet(rdns: string, timeoutMs: number): Promise<InitialAPI | undefined> {
+  const deadline = Date.now() + timeoutMs;
+  let wallet = findWallet(rdns);
+  while (!wallet && Date.now() < deadline) {
+    await sleep(WALLET_POLL_MS);
+    wallet = findWallet(rdns);
+  }
+  return wallet;
+}
+
+async function waitForAnyWallet(timeoutMs: number): Promise<InitialAPI[]> {
+  const deadline = Date.now() + timeoutMs;
+  let wallets = discoverWallets();
+  while (wallets.length === 0 && Date.now() < deadline) {
+    await sleep(WALLET_POLL_MS);
+    wallets = discoverWallets();
+  }
+  return wallets;
+}
+
+function sameWallets(a: InitialAPI[], b: InitialAPI[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((wallet, i) => wallet.rdns === b[i].rdns && wallet.apiVersion === b[i].apiVersion);
 }
 
 function activityStorageKey(address: string): string {
@@ -170,42 +211,77 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [activity, setActivity] = useState<WalletActivity[]>([]);
   const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Monotonic attempt id — a newer connect/disconnect supersedes older awaits. */
+  const attemptRef = useRef(0);
+  /** In-flight connect per wallet, so StrictMode / rapid clicks never double-prompt. */
+  const inflight = useRef<Map<string, Promise<boolean>>>(new Map());
+
+  /** Only update wallet state when the discovered set actually changed. */
   const refreshWallets = useCallback(() => {
-    setAvailableWallets(discoverWallets());
+    const wallets = discoverWallets();
+    setAvailableWallets((prev) => (sameWallets(prev, wallets) ? prev : wallets));
   }, []);
 
-  const establish = useCallback(async (walletId: string) => {
-    const wallet = typeof window !== 'undefined' ? findWallet(walletId) : undefined;
-    if (!wallet) throw new Error('wallet not found');
+  /**
+   * Connects to one wallet. Deduped per wallet id: concurrent callers share a
+   * single `wallet.connect` (one approval prompt), and the result is discarded
+   * if a newer attempt or a disconnect happened meanwhile.
+   */
+  const establish = useCallback((walletId: string): Promise<boolean> => {
+    const existing = inflight.current.get(walletId);
+    if (existing) return existing;
 
-    const connectedApi = await wallet.connect(MIDNIGHT_NETWORK_ID);
-    const status = await connectedApi.getConnectionStatus();
-    if (status.status !== 'connected') {
-      throw new Error(`wallet status: ${status.status}`);
-    }
-    const shielded = await connectedApi.getShieldedAddresses();
-    const address = shielded.shieldedAddress;
+    const task = (async (): Promise<boolean> => {
+      const attempt = ++attemptRef.current;
 
-    setState({
-      isConnected: true,
-      isConnecting: false,
-      connectedApi,
-      address,
-      connectedNetworkId: status.networkId,
-      walletId,
-      error: null,
-    });
-    setActivity(loadActivity(address));
+      const wallet = await waitForWallet(walletId, WALLET_WAIT_MS);
+      if (attempt !== attemptRef.current) return false;
+      if (!wallet) throw new Error('wallet not found');
 
-    try {
-      localStorage.setItem(LAST_WALLET_KEY, walletId);
-    } catch {
-      // Storage disabled — the choice just won't persist.
-    }
+      const connectedApi = await wallet.connect(MIDNIGHT_NETWORK_ID);
+      if (attempt !== attemptRef.current) return false;
 
-    setJustConnected(true);
-    if (pulseTimer.current) clearTimeout(pulseTimer.current);
-    pulseTimer.current = setTimeout(() => setJustConnected(false), 700);
+      // Status and address are independent — fetch them in parallel to cut a
+      // full round-trip off the connect path.
+      const [status, shielded] = await Promise.all([
+        connectedApi.getConnectionStatus(),
+        connectedApi.getShieldedAddresses(),
+      ]);
+      if (attempt !== attemptRef.current) return false;
+      if (status.status !== 'connected') {
+        throw new Error(`wallet status: ${status.status}`);
+      }
+
+      const address = shielded.shieldedAddress;
+      setState({
+        isConnected: true,
+        isConnecting: false,
+        connectedApi,
+        address,
+        connectedNetworkId: status.networkId,
+        walletId,
+        error: null,
+      });
+      setActivity(loadActivity(address));
+
+      try {
+        localStorage.setItem(LAST_WALLET_KEY, walletId);
+      } catch {
+        // Storage disabled — the choice just won't persist.
+      }
+
+      setJustConnected(true);
+      if (pulseTimer.current) clearTimeout(pulseTimer.current);
+      pulseTimer.current = setTimeout(() => setJustConnected(false), 700);
+      return true;
+    })();
+
+    inflight.current.set(walletId, task);
+    const clear = () => {
+      if (inflight.current.get(walletId) === task) inflight.current.delete(walletId);
+    };
+    task.then(clear, clear);
+    return task;
   }, []);
 
   const connect = useCallback(
@@ -222,6 +298,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 
   const disconnect = useCallback(() => {
+    // Supersede any in-flight connect so it can't revive the session.
+    attemptRef.current += 1;
+    inflight.current.clear();
     try {
       localStorage.removeItem(LAST_WALLET_KEY);
     } catch {
@@ -233,6 +312,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setState(INITIAL_STATE);
   }, []);
 
+  const openConnect = useCallback(() => {
+    void (async () => {
+      setState((s) => ({ ...s, error: null }));
+      const wallets = await waitForAnyWallet(DISCOVERY_WAIT_MS);
+      setAvailableWallets((prev) => (sameWallets(prev, wallets) ? prev : wallets));
+
+      // Exactly one wallet: connect directly, no need for a picker.
+      if (wallets.length === 1) {
+        await connect(wallets[0].rdns);
+        return;
+      }
+      setModalOpen(true);
+    })();
+  }, [connect]);
+
+  const closeConnect = useCallback(() => setModalOpen(false), []);
+
   const reconnect = useCallback(() => {
     const walletId = state.walletId;
     if (!walletId) {
@@ -241,21 +337,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
     void connect(walletId);
   }, [connect, state.walletId]);
-
-  const openConnect = useCallback(() => {
-    const wallets = discoverWallets();
-    setAvailableWallets(wallets);
-    setState((s) => ({ ...s, error: null }));
-
-    // Exactly one wallet: connect directly, no need for a picker.
-    if (wallets.length === 1) {
-      void connect(wallets[0].rdns);
-      return;
-    }
-    setModalOpen(true);
-  }, [connect]);
-
-  const closeConnect = useCallback(() => setModalOpen(false), []);
 
   const recordActivity = useCallback(
     (type: WalletActivityType, commitment?: string) => {
@@ -283,13 +364,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const onFocus = () => refreshWallets();
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onFocus);
-    const timer = setTimeout(refreshWallets, 800);
     return () => {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onFocus);
-      clearTimeout(timer);
     };
   }, [refreshWallets]);
+
+  // While the picker is open with nothing found, keep polling for injection.
+  useEffect(() => {
+    if (!isModalOpen || availableWallets.length > 0) return;
+    const interval = setInterval(refreshWallets, 500);
+    return () => clearInterval(interval);
+  }, [isModalOpen, availableWallets.length, refreshWallets]);
 
   // Persist across reloads: silently reconnect to the last wallet, if present.
   useEffect(() => {
@@ -305,16 +391,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, isConnecting: true }));
     establish(walletId)
       .catch(() => {
-        if (cancelled) return;
-        try {
-          localStorage.removeItem(LAST_WALLET_KEY);
-        } catch {
-          // ignore
-        }
-        setState(INITIAL_STATE);
+        // Silent failure: keep the stored choice so a later load can retry.
+        // Clearing it here is what produced forced reconnect prompts after a
+        // transient failure (wallet locked, not yet injected, network hiccup).
       })
       .finally(() => {
-        if (!cancelled) setState((s) => ({ ...s, isConnecting: false }));
+        if (cancelled) return;
+        setState((s) => (s.isConnected ? s : { ...s, isConnecting: false }));
       });
 
     return () => {

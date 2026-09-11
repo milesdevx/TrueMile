@@ -5,6 +5,7 @@ import { VerifiedStamp } from '@/components/site/verified-stamp';
 
 const FOOTER_LINKS = [
   { href: '/registry', label: 'Claims registry', internal: true },
+  { href: '/doc', label: 'User manual', internal: true },
   { href: 'https://github.com/milesdevx/TrueMile', label: 'Repository', internal: false },
   { href: 'https://github.com/milesdevx/TrueMile#readme', label: 'Docs / README', internal: false },
   {
