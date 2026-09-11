@@ -4,19 +4,19 @@ import { cn } from '@/lib/utils';
 
 interface CtaLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string;
-  variant?: 'amber' | 'ink' | 'outline';
+  variant?: 'signal' | 'seal' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
 }
 
 const base =
   'inline-flex items-center justify-center rounded-md font-medium transition-colors ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-paper';
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-ground';
 
 const variants = {
-  amber: 'bg-amber text-ink hover:bg-amber/90',
-  ink: 'bg-ink text-paper hover:bg-ink/90',
-  outline:
-    'border border-ink/60 bg-transparent text-ink hover:border-ink hover:bg-paper/60',
+  signal: 'bg-signal text-onaccent hover:bg-signal/90',
+  seal: 'bg-seal text-onaccent hover:bg-seal/90',
+  outline: 'border border-line bg-transparent text-bone hover:border-dim hover:bg-panel2/60',
+  ghost: 'bg-transparent text-dim hover:text-bone',
 };
 
 const sizes = {
@@ -27,7 +27,7 @@ const sizes = {
 
 export function CtaLink({
   href,
-  variant = 'amber',
+  variant = 'signal',
   size = 'md',
   className,
   ...props

@@ -2,16 +2,17 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'secondary' | 'outline' | 'destructive' | 'success';
+  variant?: 'default' | 'secondary' | 'outline' | 'destructive' | 'success' | 'sealed';
 }
 
 function Badge({ className, variant = 'default', ...props }: BadgeProps) {
   const variants = {
-    default: 'bg-primary text-primary-foreground hover:bg-primary/80',
-    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
-    destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/80',
-    success: 'border border-amber/60 bg-amber/15 text-ink',
+    default: 'bg-signal text-onaccent',
+    secondary: 'bg-panel2 text-bone',
+    outline: 'border border-line bg-transparent text-bone',
+    destructive: 'bg-danger text-bone',
+    success: 'border border-seal/50 bg-seal/15 text-seal',
+    sealed: 'border border-sealed/50 bg-sealed/15 text-sealed',
   };
 
   return (

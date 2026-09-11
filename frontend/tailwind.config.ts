@@ -1,5 +1,14 @@
 import type { Config } from 'tailwindcss';
 
+/**
+ * TrueMile design tokens — a vehicle title certificate, not a fintech dashboard.
+ *
+ * Three semantic colors carry the meaning and are reused consistently:
+ *   seal    — verified / public result (brass)
+ *   sealed  — private, hidden data (chrome-teal)
+ *   signal  — take-action CTA (amber turn signal)
+ * No fourth accent is introduced.
+ */
 const config: Config = {
   content: [
     './app/**/*.{js,ts,jsx,tsx,mdx}',
@@ -8,44 +17,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        paper: '#EDE7D9',
-        'paper-light': '#F6F1E5',
-        ink: '#14171F',
-        graphite: '#2A2E37',
-        amber: '#C98A2C',
-        teal: '#1F6F63',
-        redacted: '#9C978C',
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
-        },
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
-        },
+        ground: 'rgb(var(--ground) / <alpha-value>)',
+        panel: 'rgb(var(--panel) / <alpha-value>)',
+        panel2: 'rgb(var(--panel2) / <alpha-value>)',
+        line: 'rgb(var(--line) / <alpha-value>)',
+        bone: 'rgb(var(--bone) / <alpha-value>)',
+        dim: 'rgb(var(--dim) / <alpha-value>)',
+        faint: 'rgb(var(--faint) / <alpha-value>)',
+        seal: 'rgb(var(--seal) / <alpha-value>)',
+        sealed: 'rgb(var(--sealed) / <alpha-value>)',
+        signal: 'rgb(var(--signal) / <alpha-value>)',
+        danger: 'rgb(var(--danger) / <alpha-value>)',
+        /** Text that sits on a signal/seal/danger fill — flips per theme. */
+        onaccent: 'rgb(var(--onaccent) / <alpha-value>)',
       },
       fontFamily: {
+        display: [
+          'var(--font-barlow-condensed)',
+          'ui-sans-serif',
+          'system-ui',
+          'sans-serif',
+        ],
         sans: [
           'var(--font-inter-tight)',
           'ui-sans-serif',

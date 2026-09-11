@@ -3,34 +3,49 @@
 @tailwind utilities;
 
 :root {
-  --ink: 224 22% 10%;
-  --paper: 42 36% 89%;
-  --paper-light: 42 49% 93%;
-  --graphite: 222 13% 19%;
-  --amber: 36 64% 48%;
-  --teal: 171 56% 28%;
-  --redacted: 41 7% 58%;
+  /* Certificate palette — channel values so alpha modifiers work. */
+  --ground: 21 23 28; /* garage-floor charcoal, not pure black */
+  --panel: 27 30 38; /* card surface */
+  --panel2: 34 38 47; /* raised / sealed chip surface */
+  --line: 49 54 63; /* borders, dividers, perforated edge */
+  --bone: 236 232 223; /* primary text — aged title paper */
+  --dim: 144 150 163; /* secondary text */
+  --faint: 92 98 112; /* field labels, timestamps */
 
-  --background: 42 36% 89%;
-  --foreground: 222 13% 19%;
-  --card: 42 49% 93%;
-  --card-foreground: 222 13% 19%;
-  --popover: 42 49% 93%;
-  --popover-foreground: 222 13% 19%;
-  --primary: 36 64% 48%;
-  --primary-foreground: 224 22% 10%;
-  --secondary: 224 22% 10%;
-  --secondary-foreground: 42 36% 89%;
-  --muted: 42 30% 84%;
-  --muted-foreground: 224 10% 35%;
-  --accent: 42 49% 93%;
-  --accent-foreground: 224 22% 10%;
-  --destructive: 0 62% 40%;
-  --destructive-foreground: 42 36% 89%;
-  --border: 40 12% 66%;
-  --input: 40 12% 66%;
-  --ring: 224 22% 10%;
+  --seal: 201 162 74; /* verified / public result */
+  --sealed: 95 184 176; /* private, sealed data */
+  --signal: 224 138 60; /* action / CTA */
+  --danger: 211 101 79; /* risk / failed claim */
+  --onaccent: 21 23 28; /* text on a signal/seal/danger fill */
+
+  /* Motion: ease-out to appear, ease-in to dismiss. Never bounce/spring. */
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
   --radius: 0.375rem;
+  color-scheme: dark;
+}
+
+/*
+ * Light mode is its own intentional look — "clean title paper", not the dark
+ * palette inverted. Accent colors are darkened for contrast on light ground.
+ */
+[data-theme='light'] {
+  --ground: 246 244 238;
+  --panel: 255 255 255;
+  --panel2: 236 232 221;
+  --line: 216 211 198;
+  --bone: 28 30 36;
+  --dim: 90 95 107;
+  --faint: 138 143 155;
+
+  --seal: 166 127 46;
+  --sealed: 47 143 134;
+  --signal: 199 111 34;
+  --danger: 184 70 47;
+  --onaccent: 250 248 243;
+
+  color-scheme: light;
 }
 
 * {
@@ -44,47 +59,241 @@ body {
 }
 
 body {
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
+  background-color: rgb(var(--ground));
+  color: rgb(var(--bone));
   font-family: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 ::selection {
-  background: hsl(var(--amber) / 0.35);
-  color: hsl(var(--ink));
+  background: rgb(var(--seal) / 0.35);
+  color: rgb(var(--bone));
 }
 
 a:focus-visible,
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+[tabindex]:focus-visible {
   outline: none;
 }
 
-/* The one animated moment: a rubber stamp pressing down. */
-@keyframes stamp-press {
+/* ------------------------------------------------------------------ *
+ * Certificate surfaces
+ * ------------------------------------------------------------------ */
+
+/* A redacted field: a static, deliberately "printed" hatch — never animated. */
+.redacted {
+  background-color: rgb(var(--panel2));
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgb(var(--sealed) / 0.22) 0,
+    rgb(var(--sealed) / 0.22) 2px,
+    transparent 2px,
+    transparent 7px
+  );
+  box-shadow: inset 0 0 0 1px rgb(var(--line));
+}
+
+/* The recessed housing behind odometer digits, like a dashboard panel. */
+.odometer-face {
+  background-image: linear-gradient(180deg, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.2));
+  background-color: rgb(var(--ground));
+  box-shadow:
+    inset 0 2px 5px rgb(0 0 0 / 0.75),
+    inset 0 0 0 1px rgb(var(--line));
+}
+
+/* A sealed odometer cell: hatch inside the recess. */
+.odometer-cell-redacted {
+  background-color: rgb(var(--panel2));
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgb(var(--sealed) / 0.22) 0,
+    rgb(var(--sealed) / 0.22) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+  box-shadow: inset 0 0 0 1px rgb(var(--line));
+}
+
+/*
+ * Light mode: the printed hatch and the recess need recalibrating, not the
+ * same opacity values. A pattern subtle enough on dark disappears on light.
+ */
+[data-theme='light'] .redacted {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgb(var(--sealed) / 0.32) 0,
+    rgb(var(--sealed) / 0.32) 2px,
+    transparent 2px,
+    transparent 7px
+  );
+}
+
+[data-theme='light'] .odometer-cell-redacted {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgb(var(--sealed) / 0.32) 0,
+    rgb(var(--sealed) / 0.32) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+}
+
+[data-theme='light'] .odometer-face {
+  background-image: linear-gradient(180deg, rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.02));
+  box-shadow:
+    inset 0 2px 6px rgb(0 0 0 / 0.2),
+    inset 0 0 0 1px rgb(var(--line));
+}
+
+.perforated {
+  background-image: repeating-linear-gradient(
+    to right,
+    rgb(var(--line)) 0,
+    rgb(var(--line)) 5px,
+    transparent 5px,
+    transparent 11px
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * Motion — motion always means "something real is happening", never
+ * "the page is alive". Easing is deceleration only (no bounce/overshoot).
+ * ------------------------------------------------------------------ */
+
+/* One settle when a static wax seal is confirmed. */
+@keyframes seal-press {
   0% {
-    opacity: 0;
-    transform: rotate(18deg) scale(2.1);
+    transform: scale(1);
   }
-  55% {
-    opacity: 1;
-    transform: rotate(-3deg) scale(0.94);
+  50% {
+    transform: scale(1.03);
   }
   100% {
-    opacity: 1;
-    transform: rotate(0deg) scale(1);
+    transform: scale(1);
   }
 }
 
-.stamp-anim {
+.seal-press {
   transform-origin: center;
-  animation: stamp-press 0.55s cubic-bezier(0.22, 0.9, 0.3, 1.05) 0.35s both;
+  animation: seal-press 200ms var(--ease-out) both;
 }
 
+/* Exactly one confirmation pulse on a status dot, then it sits static. */
+@keyframes dot-confirm {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  40% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.dot-confirm {
+  animation: dot-confirm 500ms var(--ease-out) both;
+}
+
+/* Proof generation: trace the outline in, like a stamp being drawn. */
+@keyframes seal-trace {
+  from {
+    stroke-dashoffset: 258;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Calm, non-urgent wait while the real proof server responds. */
+@keyframes seal-wait {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* A single settle when the proof resolves — one, not a loop. */
+@keyframes seal-settle {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.proof-seal-outline {
+  stroke-dasharray: 258;
+  animation: seal-trace 600ms var(--ease-out) both;
+}
+
+.proof-seal-wait {
+  animation: seal-wait 1.4s ease-in-out infinite;
+}
+
+.proof-seal-settle {
+  animation: seal-settle 200ms var(--ease-out) both;
+}
+
+/* The hero enters once on first paint. No scroll-triggered reveals. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-up {
+  animation: fade-up 300ms var(--ease-out) both;
+}
+
+/*
+ * Odometer slot settle — used once, on the hero card, because the product is
+ * named after mileage. Resolves to sealed dashes, not numbers.
+ */
+@keyframes odometer-roll {
+  from {
+    opacity: 0;
+    transform: translateY(-45%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.odometer-roll {
+  animation: odometer-roll 150ms var(--ease-out) both;
+}
+
+/* Respect reduced motion globally: instant state change, static labels. */
 @media (prefers-reduced-motion: reduce) {
-  .stamp-anim {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

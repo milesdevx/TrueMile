@@ -3,8 +3,8 @@ import { useId } from 'react';
 import { cn } from '@/lib/utils';
 
 const MARK_COLORS = {
-  amber: '#C98A2C',
-  ink: '#14171F',
+  seal: '#c9a24a',
+  bone: '#ece8df',
 } as const;
 
 export type MarkTone = keyof typeof MARK_COLORS;
@@ -17,7 +17,7 @@ export interface TrueMileMarkProps extends React.SVGAttributes<SVGSVGElement> {
 
 export function TrueMileMark({
   className,
-  tone = 'amber',
+  tone = 'seal',
   label = 'TrueMile verified vehicle history',
   ...props
 }: TrueMileMarkProps) {
@@ -73,7 +73,7 @@ export function TrueMileMark({
         fill={color}
         fontSize="11"
         fontWeight="700"
-        style={{ fontFamily: 'var(--font-inter-tight), sans-serif' }}
+        style={{ fontFamily: 'var(--font-barlow-condensed), sans-serif' }}
       >
         <textPath href={`#${textPathId}`} textLength="93" lengthAdjust="spacing">
           TRUEMILE
@@ -98,7 +98,7 @@ export function TrueMileMark({
       <circle cx="60" cy="62" r="3" fill={color} />
 
       <path
-        d="M60 80.5 l1.2 2.6 2.9 .42 -2.1 2.05 .5 2.9 -2.5 -1.3 -2.5 1.3 .5 -2.9 -2.1 -2.05 2.9 -.42 z"
+        d="M60 80.5 l1.2 2.6 2.9 .42 -2.1 2.05 .5 2.9 -2.5-1.3 -2.5 1.3 .5-2.9 -2.1-2.05 2.9 -.42 z"
         fill={color}
       />
     </svg>
@@ -108,12 +108,14 @@ export function TrueMileMark({
 export interface TrueMileLogoProps extends React.HTMLAttributes<HTMLSpanElement> {
   className?: string;
   markClassName?: string;
+  wordmarkClassName?: string;
   variant?: 'default' | 'on-ink';
 }
 
 export function TrueMileLogo({
   className,
   markClassName,
+  wordmarkClassName,
   variant = 'default',
   ...props
 }: TrueMileLogoProps) {
@@ -123,11 +125,12 @@ export function TrueMileLogo({
         className={cn('h-8 w-8', markClassName)}
         aria-hidden="true"
         label=""
+        tone={variant === 'on-ink' ? 'bone' : 'seal'}
       />
       <span
         className={cn(
-          'text-xl font-bold tracking-tight',
-          variant === 'default' ? 'text-ink' : 'text-paper'
+          'font-display text-2xl font-semibold uppercase leading-none tracking-[0.14em] text-bone',
+          wordmarkClassName
         )}
       >
         TrueMile
