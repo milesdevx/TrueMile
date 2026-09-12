@@ -15,15 +15,8 @@ function truncateAddress(address: string): string {
  * The connected dot pulses exactly once, then sits static.
  */
 export function WalletButton({ className }: { className?: string }) {
-  const {
-    isConnected,
-    isConnecting,
-    isReconnecting,
-    address,
-    justConnected,
-    isWrongNetwork,
-    openConnect,
-  } = useWallet();
+  const { isConnected, isConnecting, address, justConnected, isWrongNetwork, openConnect } =
+    useWallet();
   const [panelOpen, setPanelOpen] = useState(false);
   const [anchor, setAnchor] = useState<ProfileAnchor | null>(null);
   const pillRef = useRef<HTMLButtonElement>(null);
@@ -89,13 +82,13 @@ export function WalletButton({ className }: { className?: string }) {
     <button
       type="button"
       onClick={openConnect}
-      disabled={isConnecting || isReconnecting}
+      disabled={isConnecting}
       className={cn(
         'inline-flex h-8 items-center rounded-md border border-signal/60 bg-transparent px-3 text-xs font-semibold text-signal transition-colors duration-150 hover:bg-signal/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-ground disabled:opacity-60',
         className
       )}
     >
-      {isReconnecting ? 'Reconnecting…' : isConnecting ? 'Connecting…' : 'Connect Wallet'}
+      {isConnecting ? 'Connecting…' : 'Connect Wallet'}
     </button>
   );
 }

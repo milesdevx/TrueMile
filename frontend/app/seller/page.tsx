@@ -105,7 +105,7 @@ function NumberField({
 }
 
 export default function SellerPage() {
-  const { isConnected, openConnect, recordActivity } = useWallet();
+  const { isConnected, ensureConnected, recordActivity } = useWallet();
   const [mileage, setMileage] = useState('54000');
   const [majorAccidents, setMajorAccidents] = useState('0');
   const [dealerServices, setDealerServices] = useState('3');
@@ -126,11 +126,10 @@ export default function SellerPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    // Gate at the point of action — browsing stays wallet-free.
-    if (!isConnected) {
-      openConnect();
-      return;
-    }
+    // Restored sessions are re-authorized here, at the point of action — never
+    // on page load — so refreshing does not prompt the wallet.
+    const connectedApi = await ensureConnected();
+    if (!connectedApi) return;
 
     setLoading(true);
     setError(null);

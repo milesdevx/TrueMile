@@ -19,6 +19,7 @@ export const MIDNIGHT_NETWORK_ID =
   process.env.NEXT_PUBLIC_MIDNIGHT_NETWORK_ID ?? 'preprod';
 
 const LAST_WALLET_KEY = 'truemile_last_wallet';
+const SESSION_KEY = 'truemile_session_v1';
 const ACTIVITY_KEY_PREFIX = 'truemile_activity_';
 
 /** How long to wait for a wallet extension to inject before giving up. */
@@ -49,7 +50,6 @@ export interface WalletActivity {
 export interface WalletState {
   isConnected: boolean;
   isConnecting: boolean;
-  isReconnecting: boolean;
   connectedApi: ConnectedAPI | null;
   address: string | null;
   connectedNetworkId: string | null;
@@ -71,12 +71,17 @@ export interface WalletContextValue extends WalletState {
   reconnect: () => void;
   disconnect: () => void;
   recordActivity: (type: WalletActivityType, commitment?: string) => void;
+  /**
+   * Returns a live ConnectedAPI, establishing one on demand. Restored sessions
+   * hold no live API, so the wallet is only contacted when an action needs it —
+   * never on page load.
+   */
+  ensureConnected: () => Promise<ConnectedAPI | null>;
 }
 
 const INITIAL_STATE: WalletState = {
   isConnected: false,
   isConnecting: false,
-  isReconnecting: false,
   connectedApi: null,
   address: null,
   connectedNetworkId: null,
@@ -205,6 +210,60 @@ function makeId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/**
+ * A remembered session: enough to restore the connected UI instantly on reload
+ * without calling `connect()` (which is what prompts the wallet). No keys or
+ * live API are ever stored — only the public address, wallet id, and network.
+ */
+interface WalletSession {
+  walletId: string;
+  address: string;
+  networkId: string;
+  savedAt: number;
+}
+
+function loadSession(): WalletSession | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<WalletSession>;
+    if (
+      typeof parsed.walletId === 'string' &&
+      typeof parsed.address === 'string' &&
+      parsed.address.length > 0
+    ) {
+      return {
+        walletId: parsed.walletId,
+        address: parsed.address,
+        networkId: typeof parsed.networkId === 'string' ? parsed.networkId : MIDNIGHT_NETWORK_ID,
+        savedAt: typeof parsed.savedAt === 'number' ? parsed.savedAt : Date.now(),
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(session: WalletSession): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    // Storage disabled — the session just won't be restored next load.
+  }
+}
+
+function clearSession(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<WalletState>(INITIAL_STATE);
   const [availableWallets, setAvailableWallets] = useState<InitialAPI[]>([]);
@@ -216,7 +275,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   /** Monotonic attempt id — a newer connect/disconnect supersedes older awaits. */
   const attemptRef = useRef(0);
   /** In-flight connect per wallet, so StrictMode / rapid clicks never double-prompt. */
-  const inflight = useRef<Map<string, Promise<boolean>>>(new Map());
+  const inflight = useRef<Map<string, Promise<ConnectedAPI | null>>>(new Map());
 
   /** Only update wallet state when the discovered set actually changed. */
   const refreshWallets = useCallback(() => {
@@ -229,19 +288,19 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
    * single `wallet.connect` (one approval prompt), and the result is discarded
    * if a newer attempt or a disconnect happened meanwhile.
    */
-  const establish = useCallback((walletId: string): Promise<boolean> => {
+  const establish = useCallback((walletId: string): Promise<ConnectedAPI | null> => {
     const existing = inflight.current.get(walletId);
     if (existing) return existing;
 
-    const task = (async (): Promise<boolean> => {
+    const task = (async (): Promise<ConnectedAPI | null> => {
       const attempt = ++attemptRef.current;
 
       const wallet = await waitForWallet(walletId, WALLET_WAIT_MS);
-      if (attempt !== attemptRef.current) return false;
+      if (attempt !== attemptRef.current) return null;
       if (!wallet) throw new Error('wallet not found');
 
       const connectedApi = await wallet.connect(MIDNIGHT_NETWORK_ID);
-      if (attempt !== attemptRef.current) return false;
+      if (attempt !== attemptRef.current) return null;
 
       // Status and address are independent — fetch them in parallel to cut a
       // full round-trip off the connect path.
@@ -249,7 +308,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         connectedApi.getConnectionStatus(),
         connectedApi.getShieldedAddresses(),
       ]);
-      if (attempt !== attemptRef.current) return false;
+      if (attempt !== attemptRef.current) return null;
       if (status.status !== 'connected') {
         throw new Error(`wallet status: ${status.status}`);
       }
@@ -258,7 +317,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setState({
         isConnected: true,
         isConnecting: false,
-        isReconnecting: false,
         connectedApi,
         address,
         connectedNetworkId: status.networkId,
@@ -267,6 +325,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       });
       setActivity(loadActivity(address));
 
+      // Remember the session so the next reload restores the connected UI
+      // without calling connect() and re-prompting the wallet.
+      saveSession({ walletId, address, networkId: status.networkId, savedAt: Date.now() });
       try {
         localStorage.setItem(LAST_WALLET_KEY, walletId);
       } catch {
@@ -276,7 +337,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setJustConnected(true);
       if (pulseTimer.current) clearTimeout(pulseTimer.current);
       pulseTimer.current = setTimeout(() => setJustConnected(false), 700);
-      return true;
+      return connectedApi;
     })();
 
     inflight.current.set(walletId, task);
@@ -289,19 +350,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const connect = useCallback(
     async (walletId: string) => {
-      setState((s) => ({ ...s, isConnecting: true, isReconnecting: false, error: null }));
+      setState((s) => ({ ...s, isConnecting: true, error: null }));
       try {
-        const connected = await establish(walletId);
-        if (connected) {
+        const connectedApi = await establish(walletId);
+        // A live connection means any cached/optimistic session is now real.
+        if (connectedApi) {
+          setJustConnected(true);
           setModalOpen(false);
-        } else {
-          setState((s) =>
-            s.isConnected
-              ? s
-              : { ...s, isConnecting: false, isReconnecting: false }
-          );
         }
       } catch (err) {
+        clearSession();
         setState({ ...INITIAL_STATE, error: friendlyError(err) });
       }
     },
@@ -312,6 +370,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     // Supersede any in-flight connect so it can't revive the session.
     attemptRef.current += 1;
     inflight.current.clear();
+    clearSession();
     try {
       localStorage.removeItem(LAST_WALLET_KEY);
     } catch {
@@ -325,7 +384,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const openConnect = useCallback(() => {
     void (async () => {
-    setState((s) => ({ ...s, error: null }));
+      setState((s) => ({ ...s, error: null }));
       const wallets = await waitForAnyWallet(DISCOVERY_WAIT_MS);
       setAvailableWallets((prev) => (sameWallets(prev, wallets) ? prev : wallets));
 
@@ -339,6 +398,32 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, [connect]);
 
   const closeConnect = useCallback(() => setModalOpen(false), []);
+
+  /**
+   * Used by actions (submit/verify): reuse the live API if we have one, otherwise
+   * establish it now. This is the only place a restored session touches the
+   * wallet, so the authorization prompt happens at the point of action rather
+   * than on every page load.
+   */
+  const ensureConnected = useCallback(async (): Promise<ConnectedAPI | null> => {
+    if (state.connectedApi) return state.connectedApi;
+    if (!state.walletId) {
+      openConnect();
+      return null;
+    }
+    setState((s) => ({ ...s, isConnecting: true, error: null }));
+    try {
+      const connectedApi = await establish(state.walletId);
+      if (!connectedApi) {
+        setState((s) => (s.isConnected ? s : { ...s, isConnecting: false }));
+      }
+      return connectedApi;
+    } catch (err) {
+      clearSession();
+      setState({ ...INITIAL_STATE, error: friendlyError(err) });
+      return null;
+    }
+  }, [establish, openConnect, state.connectedApi, state.walletId]);
 
   const reconnect = useCallback(() => {
     const walletId = state.walletId;
@@ -388,37 +473,37 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [isModalOpen, availableWallets.length, refreshWallets]);
 
-  // Persist across reloads: silently reconnect to the last wallet, if present.
+  // Restore a remembered session on load WITHOUT calling the wallet. The
+  // connector has no session probe, so calling connect() here is exactly what
+  // made the wallet ask to reconnect on every refresh. We paint the connected
+  // UI from the cached session and only contact the wallet at the point of
+  // action (see ensureConnected).
   useEffect(() => {
-    let cancelled = false;
+    const session = loadSession();
+    if (session) {
+      setState({
+        isConnected: true,
+        isConnecting: false,
+        connectedApi: null,
+        address: session.address,
+        connectedNetworkId: session.networkId,
+        walletId: session.walletId,
+        error: null,
+      });
+      setActivity(loadActivity(session.address));
+      return;
+    }
+
+    // Back-compat with a wallet id saved before sessions were cached: keep the
+    // id so the next action can reconnect lazily, but don't connect now.
     let walletId: string | null = null;
     try {
       walletId = localStorage.getItem(LAST_WALLET_KEY);
     } catch {
       walletId = null;
     }
-    if (!walletId) return;
-
-    setState((s) => ({ ...s, isConnecting: true, isReconnecting: true }));
-    establish(walletId)
-      .catch(() => {
-        // Silent failure: keep the stored choice so a later load can retry.
-        // Clearing it here is what produced forced reconnect prompts after a
-        // transient failure (wallet locked, not yet injected, network hiccup).
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setState((s) =>
-          s.isConnected
-            ? s
-            : { ...s, isConnecting: false, isReconnecting: false }
-        );
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [establish]);
+    if (walletId) setState((s) => ({ ...s, walletId }));
+  }, []);
 
   useEffect(
     () => () => {
@@ -447,6 +532,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       reconnect,
       disconnect,
       recordActivity,
+      ensureConnected,
     }),
     [
       state,
@@ -461,6 +547,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       reconnect,
       disconnect,
       recordActivity,
+      ensureConnected,
     ]
   );
 

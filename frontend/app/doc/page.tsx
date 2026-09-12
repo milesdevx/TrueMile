@@ -218,9 +218,11 @@ export default function DocPage() {
               </Step>
             </Steps>
             <Callout tone="sealed" label="Stays connected">
-              TrueMile remembers your last wallet and reconnects automatically on your
-              next visit. It keeps that preference through transient hiccups — it is
-              only cleared when you choose Disconnect.
+              TrueMile remembers your last wallet and restores the connected state on
+              your next visit without contacting the wallet — so refreshing never
+              prompts you to reconnect. The wallet is only contacted when you submit
+              or verify a claim. Your preference is cleared only when you choose
+              Disconnect.
             </Callout>
           </Section>
 
