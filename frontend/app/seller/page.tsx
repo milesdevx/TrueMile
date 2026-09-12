@@ -105,7 +105,7 @@ function NumberField({
 }
 
 export default function SellerPage() {
-  const { isConnected, ensureConnected, recordActivity } = useWallet();
+  const { recordActivity } = useWallet();
   const [mileage, setMileage] = useState('54000');
   const [majorAccidents, setMajorAccidents] = useState('0');
   const [dealerServices, setDealerServices] = useState('3');
@@ -125,12 +125,6 @@ export default function SellerPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
-    // Restored sessions are re-authorized here, at the point of action — never
-    // on page load — so refreshing does not prompt the wallet.
-    const connectedApi = await ensureConnected();
-    if (!connectedApi) return;
-
     setLoading(true);
     setError(null);
     setResult(null);
@@ -346,12 +340,10 @@ export default function SellerPage() {
           {loading ? 'Generating proof…' : 'Generate verified claim'}
         </Button>
 
-        {!isConnected && (
-          <p className="text-xs leading-relaxed text-faint">
-            A wallet is required to submit a claim&apos;s proof. Your vehicle data never
-            leaves this device.
-          </p>
-        )}
+        <p className="text-xs leading-relaxed text-faint">
+          No wallet needed — submitting works without one. Your vehicle data never
+          leaves this device.
+        </p>
 
         {error && (
           <p

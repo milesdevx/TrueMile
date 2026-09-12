@@ -182,15 +182,16 @@ export default function DocPage() {
             <Bullets
               items={[
                 'A modern browser — Chrome, Edge, Firefox, Brave, or Safari.',
-                'A Midnight wallet extension installed: Lace or 1AM.',
-                'Your wallet on the network shown in the app (the wallet dialog and your profile show it — preprod by default).',
-                'No wallet at all is needed to read the landing page or browse the claims registry.',
+                'No wallet is required at all. Submitting, verifying, and browsing all work without one.',
+                'A Midnight wallet extension (Lace or 1AM) is optional — connect one only if you want to.',
+                'If you do connect, keep it on the network shown in the app (preprod by default).',
               ]}
             />
-            <Callout tone="sealed" label="Wallet is only for actions">
-              Browsing is wallet-free. You are asked to connect only when you click
-              &ldquo;Generate verified claim&rdquo; or &ldquo;Verify
-              commitment&rdquo; — at the point of action, not on page load.
+            <Callout tone="sealed" label="Wallet is optional">
+              Everything in Wave 1 works without a wallet: browse the landing page and
+              registry, submit a claim, and verify a commitment. Connecting is a
+              convenience that associates activity with your address and readies the
+              on-chain flows; it is never required.
             </Callout>
           </Section>
 
@@ -232,9 +233,10 @@ export default function DocPage() {
                 Use the Sellers tab in the navigation, or the &ldquo;Submit a
                 claim&rdquo; button on the landing page.
               </Step>
-              <Step n="02" title="Connect your wallet when asked">
-                The first time you press the submit button, you are prompted to
-                connect. Your vehicle data still never leaves the device.
+              <Step n="02" title="Connect a wallet only if you want to (optional)">
+                Submitting works with no wallet connected. If you do connect one, your
+                activity is recorded to your address — and your vehicle data still
+                never leaves the device.
               </Step>
               <Step n="03" title="Enter your private history">
                 Type your VIN (kept private), mileage, major accidents, dealer
@@ -269,9 +271,9 @@ export default function DocPage() {
                 Use the Buyers tab in the navigation, or &ldquo;Verify a claim&rdquo;
                 on the landing page.
               </Step>
-              <Step n="02" title="Connect your wallet when asked">
-                Verification is an action, so it asks for a wallet the first time you
-                run it.
+              <Step n="02" title="Connect a wallet only if you want to (optional)">
+                Verification works with no wallet connected. If you connect one, the
+                verified result is recorded to your address.
               </Step>
               <Step n="03" title="Paste the commitment">
                 Enter the 64-character hash the seller gave you. Not sure yet? Press
@@ -425,7 +427,7 @@ export default function DocPage() {
                 'The registry is local to this browser, so commitments issued elsewhere do not appear.',
                 'Wave 1 exposes one bundled verdict; per-criterion results and multi-claim records arrive in Wave 2.',
                 'Deposit-gated history unlock is not available yet.',
-                'A wallet is required for the claim actions, even though the proof itself is still local in Wave 1.',
+                'A wallet is optional: submitting and verifying work with none connected.',
               ]}
             />
             <p>

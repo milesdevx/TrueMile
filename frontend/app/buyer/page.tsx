@@ -34,7 +34,7 @@ function LockIcon() {
 }
 
 export default function BuyerPage() {
-  const { isConnected, ensureConnected, recordActivity } = useWallet();
+  const { recordActivity } = useWallet();
   const [commitment, setCommitment] = useState('');
   const [result, setResult] = useState<{ commitment: string; verified: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,11 +42,6 @@ export default function BuyerPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function runVerify(value: string) {
-    // Restored sessions are re-authorized here, at the point of action — never
-    // on page load — so refreshing does not prompt the wallet.
-    const connectedApi = await ensureConnected();
-    if (!connectedApi) return;
-
     setError(null);
     setResult(null);
     setStage('reading');
@@ -159,12 +154,10 @@ export default function BuyerPage() {
           {loading ? 'Verifying…' : 'Verify commitment'}
         </Button>
 
-        {!isConnected && (
-          <p className="mt-3 text-xs leading-relaxed text-faint">
-            A wallet is required to run a verification. The registry below stays
-            readable without one.
-          </p>
-        )}
+        <p className="mt-3 text-xs leading-relaxed text-faint">
+          No wallet needed — verification works without one. The registry stays
+          readable too.
+        </p>
 
         {error && (
           <p
