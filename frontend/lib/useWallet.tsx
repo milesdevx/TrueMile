@@ -49,6 +49,7 @@ export interface WalletActivity {
 export interface WalletState {
   isConnected: boolean;
   isConnecting: boolean;
+  isReconnecting: boolean;
   connectedApi: ConnectedAPI | null;
   address: string | null;
   connectedNetworkId: string | null;
@@ -75,6 +76,7 @@ export interface WalletContextValue extends WalletState {
 const INITIAL_STATE: WalletState = {
   isConnected: false,
   isConnecting: false,
+  isReconnecting: false,
   connectedApi: null,
   address: null,
   connectedNetworkId: null,
@@ -256,6 +258,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setState({
         isConnected: true,
         isConnecting: false,
+        isReconnecting: false,
         connectedApi,
         address,
         connectedNetworkId: status.networkId,
@@ -286,10 +289,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const connect = useCallback(
     async (walletId: string) => {
-      setState((s) => ({ ...s, isConnecting: true, error: null }));
+      setState((s) => ({ ...s, isConnecting: true, isReconnecting: false, error: null }));
       try {
-        await establish(walletId);
-        setModalOpen(false);
+        const connected = await establish(walletId);
+        if (connected) {
+          setModalOpen(false);
+        } else {
+          setState((s) =>
+            s.isConnected
+              ? s
+              : { ...s, isConnecting: false, isReconnecting: false }
+          );
+        }
       } catch (err) {
         setState({ ...INITIAL_STATE, error: friendlyError(err) });
       }
@@ -314,7 +325,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const openConnect = useCallback(() => {
     void (async () => {
-      setState((s) => ({ ...s, error: null }));
+    setState((s) => ({ ...s, error: null }));
       const wallets = await waitForAnyWallet(DISCOVERY_WAIT_MS);
       setAvailableWallets((prev) => (sameWallets(prev, wallets) ? prev : wallets));
 
@@ -388,7 +399,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
     if (!walletId) return;
 
-    setState((s) => ({ ...s, isConnecting: true }));
+    setState((s) => ({ ...s, isConnecting: true, isReconnecting: true }));
     establish(walletId)
       .catch(() => {
         // Silent failure: keep the stored choice so a later load can retry.
@@ -397,7 +408,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       })
       .finally(() => {
         if (cancelled) return;
-        setState((s) => (s.isConnected ? s : { ...s, isConnecting: false }));
+        setState((s) =>
+          s.isConnected
+            ? s
+            : { ...s, isConnecting: false, isReconnecting: false }
+        );
       });
 
     return () => {
